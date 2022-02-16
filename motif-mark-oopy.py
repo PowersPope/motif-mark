@@ -32,41 +32,56 @@ class Motif:
 
     def __init__(self, mot_string):
         self.motif = mot_string.lower()
-        self.purines = ["a", "g"]
-        self.pyrimidines = ["c", "t"]
-        self.combinations = list()
-        self.dict_comb = dict()
+        if "u" in self.motif:
+            self.motif = self.motif.replace("u", "t")
+        self.purines = "[ag]"
+        self.pyrimidines = "[ct]"
+        self.motif_regex = mot_string.lower()
 
-        for i, j in enumerate(self.motif):
-            if j == "y":
-                self.dict_comb[i] = self.pyrimidines
-            elif j == "r":
-                self.dict_comb[i] = self.purines
-            else:
-                self.dict_comb[i] = [j]
-        for combos in it.product(*(self.dict_comb[k] for k in self.dict_comb)):
-            self.combinations.append("".join([i for i in combos]))
+        if "y" in self.motif:
+            self.motif_regex = self.motif.replace("y", self.pyrimidines)
+        elif "r" in self.motif_regex:
+            self.motif_regex = self.motif_regex.replace("r", self.purines)
 
     def combos(self):
         """Return all possible motif combinations in a list"""
-        return self.combinations
+        return self.motif_regex
 
     def search_gene(self, pre, exon, post):
         """Search through a gene object and find all of the motif matches"""
-        pre_dict = dict()
-        exon_dict = dict()
-        post_dict = dict()
-        for ent in self.combinations:
-            pre_matches = re.finditer(ent, pre)
-            exon_matches = re.finditer(ent, exon)
-            post_matches = re.finditer(ent, post)
-            if [stu for stu in pre_matches] != list():
-                pre_dict[ent] = pre_matches
-            elif [stu for stu in exon_matches] != list():
-                exon_dict[ent] = exon_matches
-            elif [stu for stu in post_matches] != list():
-                post_dict[ent] = post_matches
-        return (pre_dict, exon_dict, post_dict)
+        # init holding dicts
+        match_dict = dict()
+        # grab the length of each item
+        pre_len = len(pre)
+        exon_len = len(exon)
+        post_len = len(post)
+        preAndexon = exon_len + pre_len
+        # Find the particular items of interest
+        pre_matches = re.finditer(self.motif_regex, pre)
+        exon_matches = re.finditer(self.motif_regex, exon)
+        post_matches = re.finditer(self.motif_regex, post)
+
+        for item in pre_matches:
+            if item.group() in match_dict:
+                match_dict[item.group()].append(item.span())
+            else:
+                match_dict[item.group()] = [item.span()]
+
+        for item in exon_matches:
+            new_span = (item.span()[0] + pre_len, item.span()[1] + pre_len)
+            if item.group() in match_dict:
+                match_dict[item.group()].append(new_span)
+            else:
+                match_dict[item.group()] = [new_span]
+
+        for item in post_matches:
+            new_span = (item.span()[0] + preAndexon, item.span()[1] + preAndexon)
+            if item.group() in match_dict:
+                match_dict[item.group()].append(new_span)
+            else:
+                match_dict[item.group()] = [new_span]
+
+        return match_dict
 
 
 class Gene:
@@ -100,7 +115,9 @@ class Cairo:
     Take in the Motif and Gene object and then draw it.
     """
 
-    pass
+    def __init__(self, gene_dict):
+        self.width = max([gene_dict[n].gene_len for n in gene_dict]) + 200
+        self.height = 600
 
 
 ####### Logic
@@ -117,7 +134,7 @@ with open(args.motif, "r") as motif_file:
         motif_dict[clean] = Motif(clean)
 
 
-print(motif_dict)
+# print(motif_dict)
 
 # Init global variables that will be used in the for and with loop below
 num = 0
@@ -137,7 +154,6 @@ with open(args.file, "r") as file:
                 # Add entry to dict
                 num += 1
                 entry_holder.append(unwrapped_line)
-                print("Making Object:", entry_holder)
                 gene_dict[num] = Gene(entry_holder, motif_dict)
                 # Reset the holding variables
                 unwrapped_line = ""
@@ -150,8 +166,11 @@ with open(args.file, "r") as file:
     entry_holder.append(unwrapped_line)
     gene_dict[num] = Gene(entry_holder, motif_dict)
 
-print(gene_dict)
+# print(gene_dict)
+for num in range(1, len(gene_dict) + 1):
+    print(gene_dict[num].show_matches())
 
-
-print(gene_dict[1].show_matches())
+# for k in gene_dict[1].show_matches():
+# for i in gene_dict[1].show_matches()[k]:
+# print(i)
 
