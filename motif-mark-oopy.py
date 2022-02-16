@@ -36,6 +36,7 @@ class Motif:
         self.pyrimidines = ["c", "t"]
         self.combinations = list()
         self.dict_comb = dict()
+
         for i, j in enumerate(self.motif):
             if j == "y":
                 self.dict_comb[i] = self.pyrimidines
@@ -50,11 +51,8 @@ class Motif:
         """Return all possible motif combinations in a list"""
         return self.combinations
 
-    def search_gene(self, gene):
+    def search_gene(self, pre, exon, post):
         """Search through a gene object and find all of the motif matches"""
-        pre = gene.pre_exon
-        exon = gene.exon
-        post = gene.post_exon
         pre_dict = dict()
         exon_dict = dict()
         post_dict = dict()
@@ -64,17 +62,11 @@ class Motif:
             post_matches = re.finditer(ent, post)
             if [stu for stu in pre_matches] != list():
                 pre_dict[ent] = pre_matches
-            else:
-                pre_dict[ent] = "None"
-            if [stu for stu in exon_matches] != list():
+            elif [stu for stu in exon_matches] != list():
                 exon_dict[ent] = exon_matches
-            else:
-                exon_dict[ent] = "None"
-            if [stu for stu in post_matches] != list():
+            elif [stu for stu in post_matches] != list():
                 post_dict[ent] = post_matches
-            else:
-                post_dict[ent] = "None"
-        return pre_dict, exon_dict, post_dict
+        return (pre_dict, exon_dict, post_dict)
 
 
 class Gene:
@@ -84,7 +76,7 @@ class Gene:
     Exon intron.
     """
 
-    def __init__(self, fasta_entry_lines):
+    def __init__(self, fasta_entry_lines, motif_dict):
         self.header = fasta_entry_lines[0]
         self.gene = fasta_entry_lines[1]
         self.parts = re.findall(r"([a-z]+)([A-Z]+)([a-z]+)", self.gene)
@@ -92,6 +84,15 @@ class Gene:
         self.exon = self.parts[0][1]
         self.post_exon = self.parts[0][2]
         self.gene_len = len(self.gene)
+        self.motif_matches = dict()
+
+        for motif in motif_dict:
+            self.motif_matches[motif] = motif_dict[motif].search_gene(
+                self.pre_exon, self.exon, self.post_exon
+            )
+
+    def show_matches(self):
+        return self.motif_matches
 
 
 class Cairo:
@@ -131,26 +132,26 @@ with open(args.file, "r") as file:
         if r">" in line:
             # Just add the line if unwrapped_line == ''
             if unwrapped_line == "":
-                entry_holder.append(line.strip("\n").lstrip('>'))
+                entry_holder.append(line.strip("\n").lstrip(">"))
             else:
                 # Add entry to dict
                 num += 1
                 entry_holder.append(unwrapped_line)
                 print("Making Object:", entry_holder)
-                gene_dict[num] = Gene(entry_holder)
+                gene_dict[num] = Gene(entry_holder, motif_dict)
                 # Reset the holding variables
                 unwrapped_line = ""
                 entry_holder.clear()
-                entry_holder.append(line.strip("\n").lstrip('>'))
+                entry_holder.append(line.strip("\n").lstrip(">"))
         else:
             unwrapped_line += line.strip("\n")
     # Add the last entry to the dictionary
     num += 1
     entry_holder.append(unwrapped_line)
-    gene_dict[num] = Gene(entry_holder)
+    gene_dict[num] = Gene(entry_holder, motif_dict)
 
 print(gene_dict)
 
-for k in gene_dict:
-    print(gene_dict[k].exon)
-    print(gene_dict[k].pre_exon)
+
+print(gene_dict[1].show_matches())
+
