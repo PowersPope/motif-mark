@@ -2,7 +2,7 @@
 
 import cairo
 import argparse
-import itertools
+import itertools as it
 
 
 class Motif:
@@ -14,32 +14,29 @@ class Motif:
     R Purines
     """
     def __init__(self, mot_string):
-        self.motif = mot_string.upper()
-        self.purines = ['a', 'g']
-        self.pyrimidines = ['c', 't']
+        self.motif = mot_string.lower()
+        self.purines = ["a", "g"]
+        self.pyrimidines = ["c", "t"]
         self.combinations = list()
-        self.run = True
-        while self.run == True:
-            if 'Y' in self.motif
-                loc = [i for i, ltr in enumerate(self.motif) if ltr == 'Y']
-                for y_ent in loc:
-                    for ele in self.pyrimidines:
-                        self.combinations.append(self.motif[:y_ent] + ele + self.motif[y_ent+1:])
-                if 'R' not in self.motif:
-                    self.run = False
-            if 'R' in self.motif:
-                loc = [i for i, ltr in enumerate(self.motif) if ltr == 'R']
-                for r_ent in loc:
-                    for ele in self.purines:
-                        self.combinations.append(self.motif[:r_ent] + ele + self.motif[r_ent+1:])
+        self.dict_comb = dict()
+        for i, j in enumerate(self.motif):
+            if j == "y":
+                self.dict_comb[i] = self.pyrimidines
+            elif j == "r":
+                self.dict_comb[i] = self.purines
             else:
-                self.combinations.append(self.motif)
+                self.dict_comb[i] = [j]
+        for combos in it.product(*(self.dict_comb[k] for k in self.dict_comb)):
+            self.combinations.append(''.join([i for i in combos]))
+    def show_combos(self):
+        return self.combinations
 
 
 class Gene:
     """
     Add in Exons and intron information
     """
+
     pass
 
 
@@ -47,4 +44,5 @@ class Cairo:
     """
     Take in the Motif and Gene object and then draw it.
     """
+
     pass
