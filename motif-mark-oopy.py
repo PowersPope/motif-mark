@@ -110,21 +110,47 @@ motif_dict = dict()
 # load in motif file
 with open(args.motif, "r") as motif_file:
     for line in motif_file:
+        # Strip the new line characters off of it
         clean = line.strip("\n")
+        # Add each line as the key and then create a motif object from the line
         motif_dict[clean] = Motif(clean)
 
 
 print(motif_dict)
 
+# Init global variables that will be used in the for and with loop below
+num = 0
+gene_dict = dict()
+entry_holder = list()
+unwrapped_line = ""
 
-########## Test
+# Open the gene file
+with open(args.file, "r") as file:
+    for line in file:
+        # Check to see that it is a header line
+        if r">" in line:
+            # Just add the line if unwrapped_line == ''
+            if unwrapped_line == "":
+                entry_holder.append(line.strip("\n").lstrip('>'))
+            else:
+                # Add entry to dict
+                num += 1
+                entry_holder.append(unwrapped_line)
+                print("Making Object:", entry_holder)
+                gene_dict[num] = Gene(entry_holder)
+                # Reset the holding variables
+                unwrapped_line = ""
+                entry_holder.clear()
+                entry_holder.append(line.strip("\n").lstrip('>'))
+        else:
+            unwrapped_line += line.strip("\n")
+    # Add the last entry to the dictionary
+    num += 1
+    entry_holder.append(unwrapped_line)
+    gene_dict[num] = Gene(entry_holder)
 
-mot = Motif("ygtcrcty")
-gene = Gene(["test", "cgtcgcttctgattatgGTCATAGTCCATATgtacgtcgctttctagcgtcgctt"])
+print(gene_dict)
 
-print(mot.combos())
-print(gene.pre_exon)
-print(gene.exon)
-print(gene.post_exon)
-for amp in mot.search_gene(gene):
-    print(amp)
+for k in gene_dict:
+    print(gene_dict[k].exon)
+    print(gene_dict[k].pre_exon)
