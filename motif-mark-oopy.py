@@ -6,6 +6,20 @@ import itertools as it
 import re
 
 
+def get_args():
+    args = argparse.ArgumentParser(description="Pass in Gene Fasta and Motif files")
+    args.add_argument(
+        "-f", "--file", help="Path to Gene Fasta file", required=True, type=str
+    )
+    args.add_argument(
+        "-m", "--motif", help="Path to Motif file", required=True, type=str
+    )
+    return args.parse_args()
+
+
+args = get_args()
+
+
 class Motif:
     """
     Pass in a nucleotide motif that will be responsible for generating all of the possible
@@ -88,7 +102,22 @@ class Cairo:
     pass
 
 
-##########
+####### Logic
+
+# init dictionary full of all motifs
+motif_dict = dict()
+
+# load in motif file
+with open(args.motif, "r") as motif_file:
+    for line in motif_file:
+        clean = line.strip("\n")
+        motif_dict[clean] = Motif(clean)
+
+
+print(motif_dict)
+
+
+########## Test
 
 mot = Motif("ygtcrcty")
 gene = Gene(["test", "cgtcgcttctgattatgGTCATAGTCCATATgtacgtcgctttctagcgtcgctt"])
