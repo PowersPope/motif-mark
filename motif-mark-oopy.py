@@ -27,61 +27,46 @@ class Motif:
     combinations.
     Takes into account
     Y Pyrimidines
-    R Purines
-    Returns a list of all possible combinations
-    """
+    R Purines Returns a list of all possible combinations """
 
     def __init__(self, mot_string):
         self.motif = mot_string.lower()
         if "u" in self.motif:
             self.motif = self.motif.replace("u", "t")
-        self.purines = "[ag]"
-        self.pyrimidines = "[ct]"
-        self.motif_regex = mot_string.lower()
+        self.mot_short = {
+            "y": "[ct]",
+            "r": "[ag]",
+            "w": "[at]",
+            "s": "[cg]",
+            "m": "[ac]",
+            "k": "[gt]",
+            "b": "[cgt]",
+            "d": "[agt]",
+            "h": "[act]",
+            "v": "[acg]",
+            "n": "[acgt]",
+        }
+        self.motif_regex = ""
 
-        if "y" in self.motif:
-            self.motif_regex = self.motif.replace("y", self.pyrimidines)
-        elif "r" in self.motif_regex:
-            self.motif_regex = self.motif_regex.replace("r", self.purines)
+        for c in self.motif:
+            if c in self.mot_short:
+                self.motif_regex += self.mot_short[c]
+            else:
+                self.motif_regex += c
 
-    def combos(self):
-        """Return all possible motif combinations in a list"""
-        return self.motif_regex
-
-    def search_gene(self, pre, exon, post):
+    def search_gene(self, sequence):
         """Search through a gene object and find all of the motif matches"""
         # init holding dicts
-        match_dict = dict()
+        match_list = list()
         # grab the length of each item
-        pre_len = len(pre)
-        exon_len = len(exon)
-        preAndexon = exon_len + pre_len
+        motif_len = len(self.motif_regex)
         # Find the particular items of interest
-        pre_matches = re.finditer(self.motif_regex, pre)
-        exon_matches = re.finditer(self.motif_regex, exon)
-        post_matches = re.finditer(self.motif_regex, post)
+        seq_matches = re.finditer(f"(?={self.motif_regex})", sequence)
 
-        for item in pre_matches:
-            if item.group() in match_dict:
-                match_dict[item.group()].append(item.span())
-            else:
-                match_dict[item.group()] = [item.span()]
+        for item in seq_matches:
+            match_list.append((item.span()[0], item.span()[0] + motif_len))
 
-        for item in exon_matches:
-            new_span = (item.span()[0] + pre_len, item.span()[1] + pre_len)
-            if item.group() in match_dict:
-                match_dict[item.group()].append(new_span)
-            else:
-                match_dict[item.group()] = [new_span]
-
-        for item in post_matches:
-            new_span = (item.span()[0] + preAndexon, item.span()[1] + preAndexon)
-            if item.group() in match_dict:
-                match_dict[item.group()].append(new_span)
-            else:
-                match_dict[item.group()] = [new_span]
-
-        return match_dict
+        return match_list
 
 
 class Gene:
@@ -102,9 +87,7 @@ class Gene:
         self.motif_matches = dict()
 
         for motif in motif_dict:
-            self.motif_matches[motif] = motif_dict[motif].search_gene(
-                self.pre_exon, self.exon, self.post_exon
-            )
+            self.motif_matches[motif] = motif_dict[motif].search_gene(self.gene.lower())
 
     def show_matches(self):
         return self.motif_matches
@@ -162,7 +145,7 @@ class Cairo:
                     col1 = self.color_motif[motif][0]
                     col2 = self.color_motif[motif][1]
                     col3 = self.color_motif[motif][2]
-                    for span in gene_dict[ent].show_matches()[motif][reg_mot]:
+                    for span in gene_dict[ent].show_matches()[motif]:
                         xstart = span[0] + x
                         xend = span[1] + x
                         context.set_source_rgb(col1, col2, col3)
@@ -253,13 +236,11 @@ with open(args.file, "r") as file:
     gene_dict[num] = Gene(entry_holder, motif_dict)
 
 # Print data
-# for num in range(1, len(gene_dict) + 1):
-# for i in gene_dict[num].show_matches():
-# print(i)
-# for k in gene_dict[num].show_matches()[i]:
-# print(k)
-# print(gene_dict[num].show_matches()[i][k])
+for num in range(1, len(gene_dict) + 1):
+    print(gene_dict[num].header)
+    print()
+    print(gene_dict[num].show_matches())
+    print()
 
 test = Cairo(gene_dict, motif_dict)
-print(test.color_motif)
 test.graph_data()
