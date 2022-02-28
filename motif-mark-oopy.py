@@ -21,6 +21,13 @@ def get_args():
 args = get_args()
 
 
+def range_overlap(range1, range2):
+    """Whether range1 and range2 overlap."""
+    x1, x2 = range1.start, range1.stop
+    y1, y2 = range2.start, range2.stop
+    return x1 <= y2 and y1 <= x2
+
+
 class Motif:
     """
     Pass in a nucleotide motif that will be responsible for generating all of the possible
@@ -109,6 +116,7 @@ class Cairo:
             self.color_motif[mot] = [round(random.random(), 2) for _ in range(0, 3)]
 
     def graph_data(self):
+        object_last = range(0, 1)
         # Set up the canvas
         surface = cairo.ImageSurface(cairo.FORMAT_RGB24, self.width, self.height)
         context = cairo.Context(surface)
@@ -131,6 +139,7 @@ class Cairo:
             context.stroke()
 
             # Draw the gene
+            context.set_source_rgba(0, 0, 0, 0.5)
             context.rectangle(
                 len(gene_dict[ent].pre_exon) + x,
                 y - (40 / 2),
@@ -140,17 +149,34 @@ class Cairo:
             context.fill()
 
             # Draw motifs
+            y_max = y
             for motif in gene_dict[ent].show_matches():
-                for reg_mot in gene_dict[ent].show_matches()[motif]:
+                for _ in gene_dict[ent].show_matches()[motif]:
                     col1 = self.color_motif[motif][0]
                     col2 = self.color_motif[motif][1]
                     col3 = self.color_motif[motif][2]
+                    y0 = y - 4
                     for span in gene_dict[ent].show_matches()[motif]:
                         xstart = span[0] + x
                         xend = span[1] + x
                         context.set_source_rgb(col1, col2, col3)
-                        context.rectangle(xstart, y - (40 / 2), xend - xstart, 40)
-                        context.fill()
+                        coords_in = range(xstart, xend)
+                        test = range_overlap(object_last, coords_in)
+                        if test:
+                            y0 -= 5
+                            context.rectangle(xstart, y0, xend - xstart, 3)
+                        else:
+                            y0 = y - 4
+                            context.rectangle(xstart, y0, xend - xstart, 3)
+                        # context.rectangle(xstart, y - (40 / 2), xend - xstart, 40)
+                        context.fill_preserve()
+                        context.set_source_rgb(0, 0, 0)
+                        context.set_line_width(1)
+                        context.stroke()
+
+                        object_last = coords_in
+                        if y_max > y0:
+                            y_max = y0
 
             # Draw header
             context.set_source_rgb(0, 0, 0)
@@ -158,7 +184,7 @@ class Cairo:
                 "Courier", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD
             )
             context.set_font_size(15)
-            context.move_to(50, y - 30)
+            context.move_to(50, y_max - 5)
             context.show_text(gene_dict[ent].header)
 
             # Go to the next one
