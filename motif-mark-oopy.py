@@ -116,7 +116,7 @@ class Cairo:
             self.color_motif[mot] = [round(random.random(), 2) for _ in range(0, 3)]
 
     def graph_data(self):
-        object_last = range(0, 1)
+        object_last = range(-3, 0)
         # Set up the canvas
         surface = cairo.ImageSurface(cairo.FORMAT_RGB24, self.width, self.height)
         context = cairo.Context(surface)
@@ -149,35 +149,49 @@ class Cairo:
             context.fill()
 
             # Draw motifs
-            y_max = y
+            y_max = y  # Holds the max y coord so we can draw the text above it
+            drawn_locs = {'x': [(-3,0)], 'y': [y]}  # Holds drawn motifs so no overlap
             for motif in gene_dict[ent].show_matches():
-                for _ in gene_dict[ent].show_matches()[motif]:
-                    col1 = self.color_motif[motif][0]
-                    col2 = self.color_motif[motif][1]
-                    col3 = self.color_motif[motif][2]
-                    y0 = y - 4
-                    for span in gene_dict[ent].show_matches()[motif]:
-                        xstart = span[0] + x
-                        xend = span[1] + x
-                        context.set_source_rgb(col1, col2, col3)
-                        coords_in = range(xstart, xend)
-                        test = range_overlap(object_last, coords_in)
-                        if test:
-                            y0 -= 5
-                            context.rectangle(xstart, y0, xend - xstart, 3)
+                # for _ in gene_dict[ent].show_matches()[motif]:
+                # assign the colors for that motif to their rbg values
+                col1 = self.color_motif[motif][0]
+                col2 = self.color_motif[motif][1]
+                col3 = self.color_motif[motif][2]
+                # Update the y0 value
+                for span in gene_dict[ent].show_matches()[motif]:
+                    xstart = span[0] + x
+                    xend = span[1] + x
+                    context.set_source_rgb(col1, col2, col3)
+                    coords_in = range(xstart, xend)
+
+                    # Check for coords already used
+                    for n in reversed(range(len(drawn_locs['x']))):
+                        xcord = drawn_locs['x'][n]
+                        if range_overlap(range(xcord[0], xcord[1]), coords_in) == True:
+                            test = True
+                            y0 = drawn_locs['y'][n]
+                            break
                         else:
-                            y0 = y - 4
-                            context.rectangle(xstart, y0, xend - xstart, 3)
-                        # context.rectangle(xstart, y - (40 / 2), xend - xstart, 40)
-                        context.fill_preserve()
-                        context.set_source_rgb(0, 0, 0)
-                        context.set_line_width(1)
-                        context.stroke()
+                            test = False
+                            continue
+                    # test = range_overlap(object_last, coords_in)
+                    if test:
+                        y0 -= 5
+                        context.rectangle(xstart, y0, xend - xstart, 3)
+                    else:
+                        y0 = y - 4
+                        context.rectangle(xstart, y0, xend - xstart, 3)
+                    # context.rectangle(xstart, y - (40 / 2), xend - xstart, 40)
+                    context.fill_preserve()
+                    context.set_source_rgb(0, 0, 0)
+                    context.set_line_width(1)
+                    context.stroke()
 
-                        object_last = coords_in
-                        if y_max > y0:
-                            y_max = y0
-
+                    # object_last = coords_in
+                    drawn_locs['x'].append((xstart, xend))
+                    drawn_locs['y'].append(y0)
+                    if y_max > y0:
+                        y_max = y0
             # Draw header
             context.set_source_rgb(0, 0, 0)
             context.select_font_face(
@@ -262,11 +276,11 @@ with open(args.file, "r") as file:
     gene_dict[num] = Gene(entry_holder, motif_dict)
 
 # Print data
-for num in range(1, len(gene_dict) + 1):
-    print(gene_dict[num].header)
-    print()
-    print(gene_dict[num].show_matches())
-    print()
+# for num in range(1, len(gene_dict) + 1):
+    # print(gene_dict[num].header)
+    # print()
+    # print(gene_dict[num].show_matches())
+    # print()
 
 test = Cairo(gene_dict, motif_dict)
 test.graph_data()
