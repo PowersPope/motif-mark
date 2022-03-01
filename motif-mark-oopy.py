@@ -20,6 +20,11 @@ def get_args():
 
 args = get_args()
 
+# grab file name
+file_name = args.file.split(sep='.', maxsplit=1)[0]
+if '/' in file_name:
+    file_name = file_name.split('/')[-1]
+
 
 def range_overlap(range1, range2):
     """Whether range1 and range2 overlap."""
@@ -226,7 +231,7 @@ class Cairo:
             context.show_text(mot_text.lower())
             y += 20
 
-        surface.write_to_png("test.png")
+        surface.write_to_png(f"{file_name}.png")
 
 
 ####### Logic
