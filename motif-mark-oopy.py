@@ -20,6 +20,18 @@ def get_args():
 
 args = get_args()
 
+# grab file name
+file_name = args.file.split(sep='.', maxsplit=1)[0]
+if '/' in file_name:
+    file_name = file_name.split('/')[-1]
+
+
+def range_overlap(range1, range2):
+    """Whether range1 and range2 overlap."""
+    x1, x2 = range1.start, range1.stop
+    y1, y2 = range2.start, range2.stop
+    return x1 <= y2 and y1 <= x2
+
 
 class Motif:
     """
@@ -27,61 +39,46 @@ class Motif:
     combinations.
     Takes into account
     Y Pyrimidines
-    R Purines
-    Returns a list of all possible combinations
-    """
+    R Purines Returns a list of all possible combinations """
 
     def __init__(self, mot_string):
         self.motif = mot_string.lower()
         if "u" in self.motif:
             self.motif = self.motif.replace("u", "t")
-        self.purines = "[ag]"
-        self.pyrimidines = "[ct]"
-        self.motif_regex = mot_string.lower()
+        self.mot_short = {
+            "y": "[ct]",
+            "r": "[ag]",
+            "w": "[at]",
+            "s": "[cg]",
+            "m": "[ac]",
+            "k": "[gt]",
+            "b": "[cgt]",
+            "d": "[agt]",
+            "h": "[act]",
+            "v": "[acg]",
+            "n": "[acgt]",
+        }
+        self.motif_regex = ""
 
-        if "y" in self.motif:
-            self.motif_regex = self.motif.replace("y", self.pyrimidines)
-        elif "r" in self.motif_regex:
-            self.motif_regex = self.motif_regex.replace("r", self.purines)
+        for c in self.motif:
+            if c in self.mot_short:
+                self.motif_regex += self.mot_short[c]
+            else:
+                self.motif_regex += c
 
-    def combos(self):
-        """Return all possible motif combinations in a list"""
-        return self.motif_regex
-
-    def search_gene(self, pre, exon, post):
+    def search_gene(self, sequence):
         """Search through a gene object and find all of the motif matches"""
         # init holding dicts
-        match_dict = dict()
+        match_list = list()
         # grab the length of each item
-        pre_len = len(pre)
-        exon_len = len(exon)
-        preAndexon = exon_len + pre_len
+        motif_len = len(self.motif_regex)
         # Find the particular items of interest
-        pre_matches = re.finditer(self.motif_regex, pre)
-        exon_matches = re.finditer(self.motif_regex, exon)
-        post_matches = re.finditer(self.motif_regex, post)
+        seq_matches = re.finditer(f"(?={self.motif_regex})", sequence)
 
-        for item in pre_matches:
-            if item.group() in match_dict:
-                match_dict[item.group()].append(item.span())
-            else:
-                match_dict[item.group()] = [item.span()]
+        for item in seq_matches:
+            match_list.append((item.span()[0], item.span()[0] + motif_len))
 
-        for item in exon_matches:
-            new_span = (item.span()[0] + pre_len, item.span()[1] + pre_len)
-            if item.group() in match_dict:
-                match_dict[item.group()].append(new_span)
-            else:
-                match_dict[item.group()] = [new_span]
-
-        for item in post_matches:
-            new_span = (item.span()[0] + preAndexon, item.span()[1] + preAndexon)
-            if item.group() in match_dict:
-                match_dict[item.group()].append(new_span)
-            else:
-                match_dict[item.group()] = [new_span]
-
-        return match_dict
+        return match_list
 
 
 class Gene:
@@ -102,9 +99,7 @@ class Gene:
         self.motif_matches = dict()
 
         for motif in motif_dict:
-            self.motif_matches[motif] = motif_dict[motif].search_gene(
-                self.pre_exon, self.exon, self.post_exon
-            )
+            self.motif_matches[motif] = motif_dict[motif].search_gene(self.gene.lower())
 
     def show_matches(self):
         return self.motif_matches
@@ -126,6 +121,7 @@ class Cairo:
             self.color_motif[mot] = [round(random.random(), 2) for _ in range(0, 3)]
 
     def graph_data(self):
+        object_last = range(-3, 0)
         # Set up the canvas
         surface = cairo.ImageSurface(cairo.FORMAT_RGB24, self.width, self.height)
         context = cairo.Context(surface)
@@ -148,6 +144,7 @@ class Cairo:
             context.stroke()
 
             # Draw the gene
+            context.set_source_rgba(0, 0, 0, 0.5)
             context.rectangle(
                 len(gene_dict[ent].pre_exon) + x,
                 y - (40 / 2),
@@ -157,25 +154,56 @@ class Cairo:
             context.fill()
 
             # Draw motifs
+            y_max = y  # Holds the max y coord so we can draw the text above it
+            drawn_locs = {'x': [(-3,0)], 'y': [y]}  # Holds drawn motifs so no overlap
             for motif in gene_dict[ent].show_matches():
-                for reg_mot in gene_dict[ent].show_matches()[motif]:
-                    col1 = self.color_motif[motif][0]
-                    col2 = self.color_motif[motif][1]
-                    col3 = self.color_motif[motif][2]
-                    for span in gene_dict[ent].show_matches()[motif][reg_mot]:
-                        xstart = span[0] + x
-                        xend = span[1] + x
-                        context.set_source_rgb(col1, col2, col3)
-                        context.rectangle(xstart, y - (40 / 2), xend - xstart, 40)
-                        context.fill()
+                # for _ in gene_dict[ent].show_matches()[motif]:
+                # assign the colors for that motif to their rbg values
+                col1 = self.color_motif[motif][0]
+                col2 = self.color_motif[motif][1]
+                col3 = self.color_motif[motif][2]
+                # Update the y0 value
+                for span in gene_dict[ent].show_matches()[motif]:
+                    xstart = span[0] + x
+                    xend = span[1] + x
+                    context.set_source_rgb(col1, col2, col3)
+                    coords_in = range(xstart, xend)
 
+                    # Check for coords already used
+                    for n in reversed(range(len(drawn_locs['x']))):
+                        xcord = drawn_locs['x'][n]
+                        if range_overlap(range(xcord[0], xcord[1]), coords_in) == True:
+                            test = True
+                            y0 = drawn_locs['y'][n]
+                            break
+                        else:
+                            test = False
+                            continue
+                    # test = range_overlap(object_last, coords_in)
+                    if test:
+                        y0 -= 5
+                        context.rectangle(xstart, y0, xend - xstart, 3)
+                    else:
+                        y0 = y - 4
+                        context.rectangle(xstart, y0, xend - xstart, 3)
+                    # context.rectangle(xstart, y - (40 / 2), xend - xstart, 40)
+                    context.fill_preserve()
+                    context.set_source_rgb(0, 0, 0)
+                    context.set_line_width(1)
+                    context.stroke()
+
+                    # object_last = coords_in
+                    drawn_locs['x'].append((xstart, xend))
+                    drawn_locs['y'].append(y0)
+                    if y_max > y0:
+                        y_max = y0
             # Draw header
             context.set_source_rgb(0, 0, 0)
             context.select_font_face(
                 "Courier", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD
             )
             context.set_font_size(15)
-            context.move_to(50, y - 30)
+            context.move_to(50, y_max - 5)
             context.show_text(gene_dict[ent].header)
 
             # Go to the next one
@@ -203,7 +231,7 @@ class Cairo:
             context.show_text(mot_text.lower())
             y += 20
 
-        surface.write_to_png("test.png")
+        surface.write_to_png(f"{file_name}.png")
 
 
 ####### Logic
@@ -254,12 +282,10 @@ with open(args.file, "r") as file:
 
 # Print data
 # for num in range(1, len(gene_dict) + 1):
-# for i in gene_dict[num].show_matches():
-# print(i)
-# for k in gene_dict[num].show_matches()[i]:
-# print(k)
-# print(gene_dict[num].show_matches()[i][k])
+    # print(gene_dict[num].header)
+    # print()
+    # print(gene_dict[num].show_matches())
+    # print()
 
 test = Cairo(gene_dict, motif_dict)
-print(test.color_motif)
 test.graph_data()
