@@ -46,3 +46,12 @@ You can see that you supply the fasta file with `-f` and the motif file with `-m
 This will output a .png file that has the same name as the file passed in the `-f` parameter.
 
 
+## Output
+
+This is what you should expect to see:
+
+- Lines are introns
+- Large Blocks are Exons
+- Then there is a key to associate what motif goes with which small colored box
+
+~('Output')['./Figure_1.png']
