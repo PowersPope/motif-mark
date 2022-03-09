@@ -50,8 +50,8 @@ This will output a .png file that has the same name as the file passed in the `-
 
 This is what you should expect to see:
 
-- Lines are introns
-- Large Blocks are Exons
+- Long Black Lines are Introns
+- Large Opaque Blocks are Exons
 - Then there is a key to associate what motif goes with which small colored box
 
-!['Output']('./Figure_1.png')
+!['Output'](Figure_1.png "Example Output")
