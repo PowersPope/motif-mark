@@ -97,17 +97,17 @@ class Gene:
         self.post_exon = self.parts[0][2]
         self.gene_len = len(self.gene)
         self.motif_matches = dict()
-
+        # generate all of the motif matches within this particular fasta gene stored into a dictionary
         for motif in motif_dict:
             self.motif_matches[motif] = motif_dict[motif].search_gene(self.gene.lower())
-
+    # Function to show the motif dictionary
     def show_matches(self):
         return self.motif_matches
 
 
 class Cairo:
     """
-    Take in the Motif and Gene object and then draw it.
+    Take in the Motif and Gene object and then draw it using pyCairo.
     """
 
     def __init__(self, gene_dict, motif_dict):
@@ -117,6 +117,8 @@ class Cairo:
         self.motif = motif_dict
         self.color_motif = dict()
         random.seed(10)
+        # This will generate all of the random colors that are associated with each motif that is
+        # Included in from the motif file 
         for mot in motif_dict:
             self.color_motif[mot] = [round(random.random(), 2) for _ in range(0, 3)]
 
@@ -132,6 +134,7 @@ class Cairo:
         context.rectangle(0, 0, self.width, self.height)
         context.fill()
 
+        # Set the starting location of the x and y locations for the first drawing
         x = 30
         y = 100
         for ent in gene_dict:
@@ -162,8 +165,8 @@ class Cairo:
                 col1 = self.color_motif[motif][0]
                 col2 = self.color_motif[motif][1]
                 col3 = self.color_motif[motif][2]
-                # Update the y0 value
                 for span in gene_dict[ent].show_matches()[motif]:
+                    # Update the span locations
                     xstart = span[0] + x
                     xend = span[1] + x
                     context.set_source_rgb(col1, col2, col3)
@@ -174,16 +177,18 @@ class Cairo:
                         xcord = drawn_locs['x'][n]
                         if range_overlap(range(xcord[0], xcord[1]), coords_in) == True:
                             test = True
+                            # Pull at the starting y0 that is based on the last drawn position
                             y0 = drawn_locs['y'][n]
                             break
                         else:
                             test = False
                             continue
-                    # test = range_overlap(object_last, coords_in)
                     if test:
+                        # move the drawing up a little so that it is offset and not overlapping
                         y0 -= 5
                         context.rectangle(xstart, y0, xend - xstart, 3)
                     else:
+                        # This will be not overlapping so it is the first box drawn above the line
                         y0 = y - 4
                         context.rectangle(xstart, y0, xend - xstart, 3)
                     # context.rectangle(xstart, y - (40 / 2), xend - xstart, 40)
@@ -279,13 +284,6 @@ with open(args.file, "r") as file:
     num += 1
     entry_holder.append(unwrapped_line)
     gene_dict[num] = Gene(entry_holder, motif_dict)
-
-# Print data
-# for num in range(1, len(gene_dict) + 1):
-    # print(gene_dict[num].header)
-    # print()
-    # print(gene_dict[num].show_matches())
-    # print()
 
 test = Cairo(gene_dict, motif_dict)
 test.graph_data()
