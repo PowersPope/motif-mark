@@ -112,7 +112,7 @@ class Cairo:
 
     def __init__(self, gene_dict, motif_dict):
         self.width = max([gene_dict[n].gene_len for n in gene_dict]) + 100
-        self.height = 500
+        self.height = 100 * len(gene_dict) + 100
         self.genes = gene_dict
         self.motif = motif_dict
         self.color_motif = dict()

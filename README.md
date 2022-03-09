@@ -40,7 +40,11 @@ When calling the python file you can do it as below:
 python motif-mark-oopy.py -f <fasta file> -m <motif file>
 ```
 
-You can see that you supply the fasta file with `-f` and the motif file with `-m` .
+You can see that you supply the fasta file with `-f` and the motif file with `-m`. We advise that you
+run only 5-10 genes per run. As the picture will be fairly large. Also, it is important to note that
+if you supply too many Motifs that it may overlap with some of the longer Introns. We would advise to
+use around 5-10 Motifs at a time as well. If you need to do more that is fine. Just be aware of the
+keys display.
 
 
 This will output a .png file that has the same name as the file passed in the `-f` parameter.
