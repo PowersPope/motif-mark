@@ -54,4 +54,4 @@ This is what you should expect to see:
 - Large Blocks are Exons
 - Then there is a key to associate what motif goes with which small colored box
 
-~('Output')['./Figure_1.png']
+!['Output']('./Figure_1.png')
